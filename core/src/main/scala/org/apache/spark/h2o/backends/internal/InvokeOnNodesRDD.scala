@@ -22,6 +22,7 @@ import org.apache.spark.h2o.utils.NodeDesc
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Partition, SparkContext, TaskContext}
 
+
 /** Special kind of RDD which is used to invoke code on all executors detected in cluster. */
 private[h2o]
 class InvokeOnNodesRDD(nodes:Seq[NodeDesc], sc: SparkContext) extends RDD[NodeDesc](sc, Nil) {
@@ -39,9 +40,9 @@ class InvokeOnNodesRDD(nodes:Seq[NodeDesc], sc: SparkContext) extends RDD[NodeDe
 
 }
 
+
 private[h2o]
 class PartitionWithNodeInfo(rddId: Int, idx: Int, val nodeDesc: NodeDesc) extends Partition {
   override def hashCode(): Int = 41 * (41 + rddId) + idx
   override val index: Int = idx
-
 }
