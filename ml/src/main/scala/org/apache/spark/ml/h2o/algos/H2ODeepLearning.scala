@@ -15,45 +15,18 @@
 * limitations under the License.
 */
 
-package org.apache.spark.ml.h2o.models
+package org.apache.spark.ml.h2o.algos
 
-import hex.deeplearning.{DeepLearning, DeepLearningModel}
+import hex.deeplearning.DeepLearning
 import hex.deeplearning.DeepLearningModel.DeepLearningParameters
 import hex.schemas.DeepLearningV3.DeepLearningParametersV3
 import org.apache.spark.annotation.Since
 import org.apache.spark.h2o.H2OContext
+import org.apache.spark.ml.h2o.algos.params.H2OAlgoParams
+import org.apache.spark.ml.h2o.models.H2ODeepLearningModel
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.util._
 import org.apache.spark.sql.SQLContext
-
-
-/**
- * Deep learning ML component.
- */
-class H2ODeepLearningModel(model: DeepLearningModel,
-                           override val uid: String)(h2oContext: H2OContext, sqlContext: SQLContext)
-  extends H2OModel[H2ODeepLearningModel, DeepLearningModel](model, h2oContext, sqlContext) with MLWritable {
-
-  def this(model: DeepLearningModel)
-          (implicit h2oContext: H2OContext, sqlContext: SQLContext) = this(model, Identifiable.randomUID("dlModel"))(h2oContext, sqlContext)
-
-  override def defaultFileName: String = H2ODeepLearningModel.defaultFileName
-}
-
-object H2ODeepLearningModel extends MLReadable[H2ODeepLearningModel] {
-
-  val defaultFileName = "dl_model"
-
-  @Since("1.6.0")
-  override def read: MLReader[H2ODeepLearningModel] = new H2OModelReader[H2ODeepLearningModel, DeepLearningModel](defaultFileName) {
-    override protected def make(model: DeepLearningModel, uid: String)
-                               (implicit h2oContext: H2OContext,sqLContext: SQLContext): H2ODeepLearningModel =
-      new H2ODeepLearningModel(model, uid)(h2oContext, sqlContext)
-  }
-
-  @Since("1.6.0")
-  override def load(path: String): H2ODeepLearningModel = super.load(path)
-}
 
 
 /**
@@ -64,7 +37,7 @@ object H2ODeepLearningModel extends MLReadable[H2ODeepLearningModel] {
 class H2ODeepLearning(parameters: Option[DeepLearningParameters], override val uid: String)
                      (implicit h2oContext: H2OContext, sqlContext: SQLContext)
   extends H2OAlgorithm[DeepLearningParameters, H2ODeepLearningModel](parameters)
-  with H2ODeepLearningParams {
+    with H2ODeepLearningParams {
 
   type SELF = H2ODeepLearning
 
@@ -79,20 +52,6 @@ class H2ODeepLearning(parameters: Option[DeepLearningParameters], override val u
     new H2ODeepLearningModel(model)
   }
 
-  /** @group setParam */
-  def setEpochs(value: Double) = set(epochs, value){getParams._epochs = value}
-
-  /** @group setParam */
-  def setL1(value: Double) = set(l1, value){getParams._l1 = value}
-
-  /** @group setParam */
-  def setL2(value: Double) = set(l2, value){getParams._l2 = value}
-
-  /** @group setParam */
-  def setHidden(value: Array[Int]) = set(hidden, value){getParams._hidden = value}
-
-  /** @group setParam */
-  def setResponseColumn(value: String) = set(responseColumn,value){getParams._response_column = value}
 }
 
 object H2ODeepLearning extends MLReadable[H2ODeepLearning] {
@@ -108,21 +67,37 @@ object H2ODeepLearning extends MLReadable[H2ODeepLearning] {
 /**
   * Parameters here can be set as normal and are duplicated to DeepLearningParameters H2O object
   */
-trait H2ODeepLearningParams extends H2OParams[DeepLearningParameters] {
+trait H2ODeepLearningParams extends H2OAlgoParams[DeepLearningParameters] {
+  self: H2OAlgorithm[DeepLearningParameters, H2ODeepLearningModel] =>
 
   type H2O_SCHEMA = DeepLearningParametersV3
 
   protected def paramTag = reflect.classTag[DeepLearningParameters]
   protected def schemaTag = reflect.classTag[H2O_SCHEMA]
 
+  /** @group setParam */
+  def setEpochs(value: Double) = set(epochs, value){getParams._epochs = value}
+
+  /** @group setParam */
+  def setL1(value: Double) = set(l1, value){getParams._l1 = value}
+
+  /** @group setParam */
+  def setL2(value: Double) = set(l2, value){getParams._l2 = value}
+
+  /** @group setParam */
+  def setHidden(value: Array[Int]) = set(hidden, value){getParams._hidden = value}
+
+  /** @group setParam */
+  def setResponseColumn(value: String) = set(responseColumn,value){getParams._response_column = value}
+
   /**
     * All parameters should be set here along with their documentation and explained default values
     */
-  final val epochs = doubleParam("epochs")
-  final val l1 = doubleParam("l1")
-  final val l2 = doubleParam("l2")
-  final val hidden = new IntArrayParam(this, "hidden", doc("hidden"))
-  final val responseColumn = param[String]("responseColumn")
+  private final val epochs = doubleParam("epochs")
+  private final val l1 = doubleParam("l1")
+  private final val l2 = doubleParam("l2")
+  private final val hidden = new IntArrayParam(this, "hidden", doc("hidden"))
+  private final val responseColumn = param[String]("responseColumn")
 
   setDefault(
     epochs -> parameters._epochs,

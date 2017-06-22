@@ -27,7 +27,7 @@ import org.json4s.jackson.JsonMethods._
   *
   * It represents H2O key.
   */
-class H2OKeyParam[T<:Keyed[T]](parent: Params, name: String, doc: String, isValid: Key[T] => Boolean)
+class H2OKeyParam[T <: Keyed[T]](parent: Params, name: String, doc: String, isValid: Key[T] => Boolean)
   extends Param[Key[T]](parent, name, doc, isValid) {
 
   def this(parent: Params, name: String, doc: String) =
