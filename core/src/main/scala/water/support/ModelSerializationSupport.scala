@@ -21,7 +21,6 @@ import java.net.URI
 
 import hex.Model
 import hex.genmodel.{ModelMojoReader, MojoModel, MojoReaderBackendFactory}
-import org.apache.spark.ml.h2o.models.H2OGBMModel
 import water.persist.Persist
 import water.{AutoBuffer, H2O, Key, Keyed}
 
