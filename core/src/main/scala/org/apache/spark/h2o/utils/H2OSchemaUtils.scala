@@ -72,7 +72,7 @@ object H2OSchemaUtils {
     StructType(types)
   }
 
-  /** Return flattenized type - recursively transforms StrucType into Seq of encapsulated types. */
+  /** Return flattenized type - recursively transforms StructType into Seq of encapsulated types. */
   def flatSchema(s: StructType, typeName: Option[String] = None, nullable: Boolean = false): Seq[StructField] = {
     s.fields.flatMap(f =>
       f.dataType match {
@@ -94,22 +94,21 @@ object H2OSchemaUtils {
     *  - all vectors are expanded into columns
     *
     * @param sc  actual Spark context
-    * @param srdd  schema-based RDD
+    * @param dataframe  Spark Data Frame
     * @return list of types with their positions
     */
-  def expandedSchema(sc: SparkContext, srdd: DataFrame): Seq[(Seq[Int], StructField, Byte)] = {
-    val schema: StructType = srdd.schema
+  def expandedSchema(sc: SparkContext, dataframe: DataFrame): Seq[(Seq[Int], StructField, Byte)] = {
+    val schema: StructType = dataframe.schema
     // Collect max size in array and vector columns to expand them
     val arrayColIdxs  = collectArrayLikeTypes(schema.fields)
     val vecColIdxs    = collectVectorLikeTypes(schema.fields)
     val numOfArrayCols = arrayColIdxs.length
-    // Collect max arrays for this RDD, it is distributed operation
-    val fmaxLens = collectMaxArrays(sc, srdd, arrayColIdxs, vecColIdxs)
+    // Collect max arrays for this Data Frame, it is distributed operation
+    val fmaxLens = collectMaxArrays(sc, dataframe, arrayColIdxs, vecColIdxs)
     // Flattens RDD's schema
     val flatRddSchema = flatSchema(schema)
     val typeIndx = collectTypeIndx(schema.fields)
-    val typesAndPath = typeIndx
-                .zip(flatRddSchema) // Seq[(Seq[Int], StructField)]
+    val typesAndPath = typeIndx.zip(flatRddSchema) // Seq[(Seq[Int], StructField)]
     var arrayCnt = 0; var vecCnt = 0
     // Generate expanded schema
     val expSchema = typesAndPath.indices.flatMap {idx =>
@@ -117,7 +116,7 @@ object H2OSchemaUtils {
       val path = tap._1
       val field = tap._2
       field.dataType match {
-        case ArrayType(aryType,nullable) =>
+        case ArrayType(aryType, nullable) =>
           val result = (0 until fmaxLens(arrayCnt)).map(i =>
             (path, StructField(field.name + i.toString, aryType, nullable), ARRAY_TYPE)
           )
@@ -153,23 +152,23 @@ object H2OSchemaUtils {
   def collectStringTypesIndx(fields: Seq[StructField], path: Seq[Int] = Seq()): Seq[Seq[Int]] = {
     fields.indices.flatMap(i => fields(i).dataType match {
       case StructType(fs) => collectStringTypesIndx(fs, path++Seq(i))
-      case StringType  => Seq(path++Seq(i))
+      case StringType  => Seq(path ++ Seq(i))
       case _ => Nil
     })
   }
 
   def collectArrayLikeTypes(fields: Seq[StructField], path: Seq[Int] = Seq()): Seq[Seq[Int]] = {
     fields.indices.flatMap(i => fields(i).dataType match {
-      case StructType(fs) => collectArrayLikeTypes(fs, path++Seq(i))
-      case ArrayType(_,_)  => Seq(path++Seq(i))
+      case StructType(fs) => collectArrayLikeTypes(fs, path ++ Seq(i))
+      case ArrayType(_, _)  => Seq(path ++ Seq(i))
       case _ => Nil
     })
   }
 
   def collectVectorLikeTypes(fields: Seq[StructField], path: Seq[Int] = Seq()): Seq[Seq[Int]] = {
     fields.indices.flatMap(i => fields(i).dataType match {
-      case StructType(fs) => collectVectorLikeTypes(fs, path++Seq(i))
-      case t => if (t.isInstanceOf[UserDefinedType[_/*mllib.linalg.Vector*/]]) Seq(path++Seq(i)) else Nil
+      case StructType(fs) => collectVectorLikeTypes(fs, path ++ Seq(i))
+      case t => if (t.isInstanceOf[UserDefinedType[_/*mllib.linalg.Vector*/]]) Seq(path ++ Seq(i)) else Nil
     })
   }
 
